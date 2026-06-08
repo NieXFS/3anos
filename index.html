@@ -306,6 +306,13 @@
       color: var(--rose)
     }
 
+    .gate .title {
+      font-family: 'Instrument Serif';
+      font-size: 42px;
+      line-height: 1.1;
+      color: var(--ink)
+    }
+
     .gate .sub {
       font-size: 14px;
       letter-spacing: .18em;
@@ -421,7 +428,8 @@
 
   <!-- gate de abertura / gesto p/ ativar bússola -->
   <div class="gate" id="gate">
-    <div class="date">08<span class="dot2">·</span>08</div>
+    <div class="date" id="gateDate">08<span class="dot2">·</span>08</div>
+    <div class="title" id="gateTitle" style="display:none">pista encontrada 💜</div>
     <div class="sub" id="gateSub">três anos</div>
     <button class="go" id="goBtn">COMEÇAR</button>
   </div>
@@ -461,7 +469,7 @@
       },
       { // 1 — tag NFC nº1
         tag: "esquentando", distance: 22, bearing: 200,
-        text: "Eu não fazia ideia que minha vida ida mudar <em>tanto</em>. E pra melhor.",
+        text: "Eu não fazia ideia que minha vida iria mudar <em>tanto</em>. E pra melhor.",
         hint: "Continua. Encosta o celular na <b>próxima pista</b> quando achar."
       },
       { // 2 — tag NFC nº2
@@ -508,6 +516,8 @@
     const hudTag = document.getElementById('hudTag');
     const hudStep = document.getElementById('hudStep');
     const gateSub = document.getElementById('gateSub');
+    const gateDate = document.getElementById('gateDate');
+    const gateTitle = document.getElementById('gateTitle');
 
     let currentHeading = 0, hasCompass = false, displayAngle = 0, arrowEl = null;
     const maxDist = Math.max(...CHECKPOINTS.map(c => c.distance || 0)) || 1;
@@ -620,6 +630,21 @@
       }, { once: true });
     });
 
+    /* ---- gate contextual: o conteúdo do gate muda conforme o checkpoint atual ---- */
+    function configureGate() {
+      if (idx === 0) {                         // abertura: exatamente como sempre foi
+        gateDate.style.display = '';
+        gateTitle.style.display = 'none';
+        gateSub.style.display = '';
+        goBtn.textContent = 'COMEÇAR';
+      } else {                                 // pista intermediária: título curto + "seguir"
+        gateDate.style.display = 'none';
+        gateTitle.style.display = '';
+        gateSub.style.display = 'none';
+        goBtn.textContent = 'SEGUIR';
+      }
+    }
+
     /* ---- barra de prévia (apague o bloco abaixo antes de publicar) ---- */
     if (PREVIEW) {
       const bar = document.createElement('div');
@@ -628,11 +653,21 @@
       document.body.appendChild(bar);
       const pl = bar.querySelector('#pl');
       const upd = () => { pl.textContent = `prévia ${idx + 1}/${CHECKPOINTS.length}`; };
-      bar.querySelector('#pv').onclick = () => { idx = (idx - 1 + CHECKPOINTS.length) % CHECKPOINTS.length; render(); upd(); };
-      bar.querySelector('#nx').onclick = () => { idx = (idx + 1) % CHECKPOINTS.length; render(); upd(); };
+      // na prévia dá pra reabrir o gate p/ inspecionar suas variações por checkpoint
+      bar.querySelector('#pv').onclick = () => { idx = (idx - 1 + CHECKPOINTS.length) % CHECKPOINTS.length; render(); configureGate(); upd(); };
+      bar.querySelector('#nx').onclick = () => { idx = (idx + 1) % CHECKPOINTS.length; render(); configureGate(); upd(); };
       upd();
       // na prévia já mostra a tela sem precisar do gesto de permissão
-      gate.querySelector('.sub').textContent = 'prévia — toque para ver';
+      gateSub.textContent = 'prévia — toque para ver';
+    }
+
+    /* ---- estado inicial do gate ----
+       • checkpoint final (a câmera): NÃO mostra gate — esconde e revela na hora.
+       • demais checkpoints: gate contextual (mantém o toque exigido pelo iOS). */
+    if (CHECKPOINTS[idx].final && !PREVIEW) {
+      gate.classList.add('hide');
+    } else {
+      configureGate();
     }
     render();
   </script>

@@ -419,6 +419,24 @@
       font-family: 'DM Mono';
       min-width: 120px
     }
+
+    /* ---------- overlay de debug (?debug=1) — só leitura ---------- */
+    .debug-hud {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 9999;
+      padding: 7px 10px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      line-height: 1.5;
+      letter-spacing: .02em;
+      color: #8dffa6;
+      background: rgba(0, 0, 0, .72);
+      white-space: pre;
+      pointer-events: none;
+    }
   </style>
 </head>
 
@@ -659,6 +677,25 @@
       upd();
       // na prévia já mostra a tela sem precisar do gesto de permissão
       gateSub.textContent = 'prévia — toque para ver';
+    }
+
+    /* ---- overlay de debug (?debug=1) ----
+       Só LEITURA: um loop próprio espelha os valores que a bússola já calcula,
+       sem tocar em onOrient/tick/enableCompass nem no array CHECKPOINTS. */
+    if (params.get('debug') === '1') {
+      const dbg = document.createElement('div');
+      dbg.className = 'debug-hud';
+      document.body.appendChild(dbg);
+      const fmt = v => (v == null ? '—' : `${Math.round(v * 10) / 10}°`);
+      (function dbgTick() {
+        const c = CHECKPOINTS[idx];
+        const heading = currentHeading;                 // MESMO valor que gira a seta (webkitCompassHeading / 360-alpha)
+        const bearing = c ? c.bearing : null;           // bearing do checkpoint atual
+        const seta = bearing == null ? null : bearing - heading;  // ângulo final aplicado
+        dbg.textContent =
+          `heading: ${fmt(heading)}\nbearing: ${fmt(bearing)}\nseta:    ${fmt(seta)}`;
+        requestAnimationFrame(dbgTick);
+      })();
     }
 
     /* ---- estado inicial do gate ----
